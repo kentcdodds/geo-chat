@@ -1,6 +1,8 @@
 import React from 'react'
+import isMatch from 'lodash/isMatch'
 import firebase from 'firebase/app'
 import {useAuthState} from 'react-firebase-hooks/auth'
+import {useDocument} from 'react-firebase-hooks/firestore'
 import {navigate} from '@reach/router'
 
 function loginWithTwitter() {
@@ -19,18 +21,65 @@ function logout() {
 
 const UserContext = React.createContext()
 
-function UserProvider(props) {
-  const {initialising, user} = useAuthState(firebase.auth())
+function Authenticate(props) {
+  const {initialising: initializing, user} = useAuthState(firebase.auth())
   const context = React.useMemo(() => {
     return {
-      // spelling is weird, so we'll fix it :)
-      initializing: initialising,
+      loading: initializing,
       user,
       loginWithTwitter,
       loginWithGitHub,
       logout,
     }
-  }, [initialising, user])
+  }, [initializing, user])
+
+  if (initializing || !user) {
+    return <UserContext.Provider value={context} {...props} />
+  }
+  return <UserProvider authenticatedUser={user} {...props} />
+}
+
+function UserProvider(props) {
+  // spelling is weird, so we'll fix it :)
+  const {authenticatedUser} = props
+  const {error, loading, value: userDoc} = useDocument(
+    firebase
+      .firestore()
+      .collection('users')
+      .doc(authenticatedUser.uid),
+  )
+
+  // update users collection with old/missing data
+  React.useEffect(() => {
+    if (!userDoc) {
+      return
+    }
+    const userData = userDoc.data()
+    const authenticatedUserData = {
+      id: authenticatedUser.uid,
+      displayName: authenticatedUser.displayName,
+      email: authenticatedUser.email,
+      photoURL: authenticatedUser.photoURL,
+      providers: authenticatedUser.providerData.map(p => ({
+        providerId: p.providerId,
+        uid: p.uid,
+      })),
+    }
+    if (!isMatch(userData, authenticatedUserData)) {
+      userDoc.ref.set(authenticatedUserData)
+    }
+  }, [authenticatedUser, userDoc])
+
+  const context = React.useMemo(() => {
+    return {
+      loading,
+      user: userDoc ? userDoc.data() : null,
+      error,
+      loginWithTwitter,
+      loginWithGitHub,
+      logout,
+    }
+  }, [loading, userDoc, error])
   return <UserContext.Provider value={context} {...props} />
 }
 
@@ -59,7 +108,7 @@ function useUnauthenticatedRedirect(destination = '/login') {
 }
 
 export {
-  UserProvider,
+  Authenticate as UserProvider,
   useUser,
   useUnauthenticatedRedirect,
   useAuthenticatedRedirect,

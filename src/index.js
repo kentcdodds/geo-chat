@@ -12,8 +12,8 @@ import Login from './screens/login'
 import About from './screens/about'
 
 function Routes() {
-  const {initializing} = useUser()
-  if (initializing) {
+  const {loading} = useUser()
+  if (loading) {
     return 'loading ...'
   }
   return (
