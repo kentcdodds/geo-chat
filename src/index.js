@@ -1,7 +1,6 @@
 /** @jsx jsx */
-import './bootstrap'
-
 import {jsx} from '@emotion/core'
+
 import ReactDOM from 'react-dom'
 import {Router} from '@reach/router'
 import AppProviders from './context'

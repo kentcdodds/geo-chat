@@ -1,8 +1,6 @@
 /** @jsx jsx */
 import {jsx} from '@emotion/core'
 import React from 'react'
-import firebase from 'firebase/app'
-import {useCollection} from 'react-firebase-hooks/firestore'
 import {Redirect} from '@reach/router'
 import {useUser} from '../context/user'
 
